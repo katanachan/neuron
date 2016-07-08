@@ -1,0 +1,142 @@
+load_file("nrngui.hoc") 
+
+create soma
+access soma
+objref g
+
+// no potassium/leak channels
+gNaBar=0.12
+gKBar=0.04
+RM = 35000
+gleak = 1/RM
+
+//Soma dimensions
+soma nseg = 1
+soma diam = 20
+soma L = 20
+soma Ra = 123.0
+soma Rm = RM
+
+
+
+// Insert channels
+soma insert nas
+soma insert kdr
+gbar_nas=gNaBar
+gkdrbar_kdr=gKBar
+
+
+v_init = -65
+stamp = 0.2
+Duration = 1
+
+objectvar stim
+soma stim = new IClamp(0.5)
+
+stim.del = 100
+stim.dur = Duration
+stim.amp = stamp
+
+tstop = 300
+
+
+// Set up graphs
+objref g[20]
+ngraph=0
+
+proc addgraph() { local ii  // define subroutine to add a new graph
+                // addgraph("variable", minvalue, maxvalue)
+    ngraph = ngraph+1
+    ii = ngraph-1
+    g[ii] = new Graph()
+    g[ii].size($2,$3, $4, $5)
+    g[ii].xaxis()
+    g[ii].yaxis()
+    g[ii].addvar($s1,1,0)
+    g[ii].save_name("graphList[0].")
+    graphList[0].append(g[ii])
+}
+
+
+// Panel buttons and procedures:
+proc update_IClamp() {
+	stim.amp=stamp
+}
+
+proc update_gNaBar() {
+	gbar_nas=gNaBar
+
+}
+
+proc update_gKBar() {
+	gkdrbar_kdr=gKBar
+
+}
+
+// To keep lines in graphs
+proc KeepLines() {
+    ng = $1
+    for ii =0,ng-1 {
+        g[ii].exec_menu("Keep Lines")
+    }
+}
+
+objref SpikeCounter, nil, spiketimes, fr, Istim
+SpikeCounter = new NetCon(&soma.v(0.5), nil)
+SpikeCounter.threshold = -15  //mV
+spiketimes = new Vector()
+fr = new Vector()
+
+
+// Define:
+proc get_firingRate() {
+    SpikeCounter.record(spiketimes)
+    numspikes = spiketimes.size()
+    fr.append(numspikes/stim.dur)
+
+}
+
+currstep = 0.05 //nA
+numamps = 50
+proc get_fiVsAmp() {
+/// For getting FI curve vs Current amplitude:
+    for (k = 0; k<=numamps*currstep; k+=currstep) {
+        // Run simulation
+	Istim = new Vector()
+	Istim.x[k] = k
+	finitialize(v_init)
+	fcurrent()
+	stim.amp = k
+	run()
+        // Get num of spikes
+        get_firingRate()
+    }
+}
+
+get_fiVsAmp()
+
+xpanel("Parameters")
+xvalue("gNaBar","gNaBar",1,"update_gNaBar()",1,1)
+xvalue("gKBar","gKBar",1,"update_gKBar()",1,1)
+xvalue("Clamp Amplitude","stamp",1,"update_Iclamp()",1,1)
+xpanel()
+
+
+
+
+// Plot Voltage
+addgraph("soma.v(0.5)",-70,70, -1, 1)
+//g[ngraph-1].addexpr("soma.gna_hh(0.5)",1,4)
+
+
+objref fi
+fi = new File()
+fi.wopen("FI.dat")
+
+for(k=0;k<Istim.size();k+=1){
+	fi.printf("%f\t%f\n",Istim.x[k],fr.x[k])
+}
+
+fi.close()
+
+nrncontrolmenu()
