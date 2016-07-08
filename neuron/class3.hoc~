@@ -3,9 +3,10 @@ load_file("nrngui.hoc")
 create soma
 access soma
 
-gNaBar=0.01
-gKBar=0.3
-ghdBar = 0.0001
+gNaBar=0.012
+gKBar=0.04
+//ghdBar = 0.0001
+ghdBar = 0.000001
 RM = 35000
 
 //Soma dimensions
@@ -32,8 +33,8 @@ ghdbar_hd = ghdBar
 
 
 v_init = -65
-stamp = 0.05
-Duration = 100
+stamp = 0.1
+Duration = 0.1
 
 objectvar stim
 soma stim = new IClamp(0.5)
@@ -42,7 +43,7 @@ stim.del = 100
 stim.dur = Duration
 stim.amp = stamp
 
-tstop = 1000
+tstop = 200
 
 
 // Panel buttons and procedures:
@@ -69,24 +70,25 @@ Istim = new Vector()
 
 objref fi
 fi = new File()
-fi.wopen("FI1.dat")
+fi.wopen("FI2.dat")
 
 // Define:
 proc get_firingRate() {
     SpikeCounter.record(spiketimes)
     numspikes = spiketimes.size()
     FR = numspikes/stim.dur
-    fi.aopen("FI1.dat")
+    fi.aopen("FI3.dat")
     fi.printf("%f\n",FR)
     fr.append(FR)
 }
 
-currstep = 0.005 //nA
+currstep = 0.05 //nA
+numamps = 50
 
 proc get_fiVsAmp() {
 /// For getting FI curve vs Current amplitude:
     
-    for (k = currstep; k<=0.1; k+=currstep) {
+    for (k = currstep; k<=numamps*currstep; k+=currstep) {
 
 
         // Run simulation
@@ -115,3 +117,4 @@ newPlotV()
 fi.close()
 
 nrncontrolmenu()
+//xopen("class3.ses")
